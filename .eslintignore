@@ -1,0 +1,13 @@
+node_modules/
+*.json
+.npm/
+static/
+*.html
+*.md
+*.log
+Dockerfile
+*.yml
+
+
+index.js
+dist/
