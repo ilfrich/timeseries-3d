@@ -3,14 +3,20 @@ import { Scene, PerspectiveCamera, WebGLRenderer, BoxGeometry, MeshBasicMaterial
 import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { mixins } from "quick-n-dirty-react"
+import util from "quick-n-dirty-utils"
 
 const DEFAULT_WIDTH = 900
 const DEFAULT_HEIGHT = 700
 
 const style = {
-    searchTerm: {
-        width: "150px",
+    filterContainer: {
+        display: "grid",
+        gridTemplateColumns: "150px 1fr",
+        gridColumnGap: "10px",
     },
+    showLayer: included => ({
+        color: included ? "#000" : "#ccc",
+    }),
 }
 
 /*
@@ -19,7 +25,7 @@ const style = {
  * - width - the width of the rendering area - default 900
  * - height - the height of the rendering area - default 700
  * - layerGap - gap between layers (space) - default 10
- * - noFilter - whether filtering by id is prohibited - default false
+ * - noFilter - whether filtering by id/layer is prohibited - default false
  */
 
 class Timeseries3D extends React.Component {
@@ -28,6 +34,7 @@ class Timeseries3D extends React.Component {
 
         this.state = {
             searchTerm: "",
+            visibleLayers: util.range(0, props.model.layers.length - 1),
         }
 
         this.animate = this.animate.bind(this)
@@ -35,6 +42,7 @@ class Timeseries3D extends React.Component {
         this.init = this.init.bind(this)
         this.createLayers = this.createLayers.bind(this)
         this.changeSearchTerm = this.changeSearchTerm.bind(this)
+        this.changeLayerVisible = this.changeLayerVisible.bind(this)
     }
 
     componentDidMount() {
@@ -53,6 +61,15 @@ class Timeseries3D extends React.Component {
             this.setState({ searchTerm })
         } else {
             this.setState({ searchTerm: "" })
+        }
+    }
+
+    changeLayerVisible(index) {
+        return () => {
+            this.setState(oldState => ({
+                ...oldState,
+                visibleLayers: util.toggleItem(oldState.visibleLayers, index),
+            }))
         }
     }
 
@@ -125,15 +142,27 @@ class Timeseries3D extends React.Component {
         let currentHue = 0
         const hueStep = 360 / this.props.model.layers.length + 1
         // add the cubes
-        this.props.model.layers.forEach(layer => {
+        this.props.model.layers.forEach((layer, index) => {
             const { height } = layer
+            if (!this.state.visibleLayers.includes(index)) {
+                // skip this layer, it has been deactivated
+                currentHue += hueStep
+                currentHeight += height + (this.props.layerGap || 10)
+                return
+            }
+            // process components
             layer.components.forEach(component => {
+                // extract geometry from component
                 const width = component.size[0]
                 const depth = component.size[1]
                 const geometry = new BoxGeometry(width, height, depth)
+
+                // init material parameter
                 let saturation = "100%"
                 let wireframe = true
                 let opacity = 0.2
+
+                // overwrite material in case we filter by search term
                 if (this.state.searchTerm !== "") {
                     // we are filtering by a search term
                     if (!component.id.toLowerCase().includes(this.state.searchTerm.toLowerCase())) {
@@ -145,6 +174,7 @@ class Timeseries3D extends React.Component {
                         opacity = 0.8
                     }
                 }
+                // create material and compose cube
                 const material = new MeshBasicMaterial({
                     color: `hsl(${currentHue}, ${saturation}, 70%)`,
                     wireframe,
@@ -152,7 +182,7 @@ class Timeseries3D extends React.Component {
                     transparent: true,
                 })
                 const cube = new Mesh(geometry, material)
-                // apply centre offset to each coordinate
+                // apply centre offset to each coordinate and add cube to scene
                 cube.position.set(
                     component.x - centre.x + width / 2,
                     currentHeight - centre.y + height / 2,
@@ -176,13 +206,30 @@ class Timeseries3D extends React.Component {
                 ></div>
                 <div style={mixins.vSpacer(15)} />
                 {this.props.noFilter ? null : (
-                    <div style={style.searchTerm}>
-                        <input
-                            type="text"
-                            style={mixins.textInput}
-                            placeholder="Search for component"
-                            onChange={this.changeSearchTerm}
-                        />
+                    <div style={style.filterContainer}>
+                        <div>
+                            <input
+                                type="text"
+                                style={mixins.textInput}
+                                placeholder="Search for component"
+                                onChange={this.changeSearchTerm}
+                            />
+                        </div>
+                        <div>
+                            <div style={mixins.vSpacer(10)} />
+                            <div style={mixins.flexRow}>
+                                {this.props.model.layers.map((layer, index) => (
+                                    <div
+                                        key={index}
+                                        style={{ ...mixins.indent(15), ...mixins.clickable }}
+                                        onClick={this.changeLayerVisible(index)}
+                                    >
+                                        <span style={style.showLayer(this.state.visibleLayers.includes(index))}>&#128065;</span>{" "}
+                                        {layer.label != null && layer.label !== "" ? layer.label : `Layer ${index + 1}`}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

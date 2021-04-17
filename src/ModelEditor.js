@@ -1,6 +1,6 @@
 import React from "react"
 import util from "quick-n-dirty-utils"
-import { mixins, Popup, ToggleSection } from "quick-n-dirty-react"
+import { mixins, Popup, ToggleSection, NotificationBar } from "quick-n-dirty-react"
 import LayerEditor from "./LayerEditor"
 import CopyLayerForm from "./CopyLayerForm"
 import Timeseries3D from "./Timeseries3D"
@@ -63,9 +63,9 @@ const style = {
         gridTemplateColumns: "150px 150px",
         gridColumnGap: "10px",
     },
-    heightForm: {
+    layerForm: {
         display: "grid",
-        gridTemplateColumns: "150px 60px",
+        gridTemplateColumns: "150px 60px 150px 100px",
         gridColumnGap: "10px",
     },
 }
@@ -92,6 +92,12 @@ const generateGuidelines = model => {
     })
     return result
 }
+
+/*
+ * Properties:
+ * - height: the height of the layer editor canvas - default 450
+ * - model: optional, if you want to already provide a model
+ */
 
 class ModelEditor extends React.Component {
     constructor(props) {
@@ -128,6 +134,7 @@ class ModelEditor extends React.Component {
         this.removeLayer = this.removeLayer.bind(this)
         this.toggleLayer = this.toggleLayer.bind(this)
         this.updateLayerHeight = this.updateLayerHeight.bind(this)
+        this.updateLayerLabel = this.updateLayerLabel.bind(this)
         this.askCopyLayer = this.askCopyLayer.bind(this)
         this.copyLayer = this.copyLayer.bind(this)
         // component operations
@@ -181,23 +188,31 @@ class ModelEditor extends React.Component {
     }
 
     addLayer() {
-        this.setState(oldState => {
-            const { currentModel } = oldState
-            // use last layers height or default height
-            const newHeight =
-                currentModel.layers.length === 0
-                    ? DEFAULT_HEIGHT
-                    : currentModel.layers[currentModel.layers.length - 1].height
-            // create new layer
-            currentModel.layers.push({
-                components: [],
-                height: newHeight,
-            })
-            return {
-                ...oldState,
-                currentModel,
+        this.setState(
+            oldState => {
+                const { currentModel } = oldState
+                // use last layers height or default height
+                const newHeight =
+                    currentModel.layers.length === 0
+                        ? DEFAULT_HEIGHT
+                        : currentModel.layers[currentModel.layers.length - 1].height
+                // create new layer
+                currentModel.layers.push({
+                    components: [],
+                    height: newHeight,
+                    label: "",
+                })
+                return {
+                    ...oldState,
+                    currentModel,
+                }
+            },
+            () => {
+                if (this.preview != null && this.preview.changeLayerVisible != null) {
+                    this.preview.changeLayerVisible(this.state.currentModel.layers.length - 1)()
+                }
             }
-        })
+        )
     }
 
     askRemoveLayer(layerIndex) {
@@ -209,7 +224,7 @@ class ModelEditor extends React.Component {
     }
 
     removeLayer() {
-        this.layers = {}  // reset this to not have dead references stored
+        this.layers = {} // reset this to not have dead references stored
         this.setState(oldState => {
             // remove the layer
             const { currentModel } = oldState
@@ -230,41 +245,44 @@ class ModelEditor extends React.Component {
             const targetIndex = moveUp ? index - 1 : index + 1
             const updates = [index, targetIndex]
             // update model
-            this.setState(oldState => {
-                const { currentModel } = oldState
-                // re-compose layer list
-                const layers = []
-                const shiftLayers = []
-                currentModel.layers.forEach((layer, idx) => {
-                    if (!updates.includes(idx)) {
-                        layers.push(layer)
+            this.setState(
+                oldState => {
+                    const { currentModel } = oldState
+                    // re-compose layer list
+                    const layers = []
+                    const shiftLayers = []
+                    currentModel.layers.forEach((layer, idx) => {
+                        if (!updates.includes(idx)) {
+                            layers.push(layer)
+                        }
+                        if (idx === index || idx === targetIndex) {
+                            // this is one of the elements we want to swap
+                            shiftLayers.push(layer)
+                        }
+                        if (shiftLayers.length === 2) {
+                            // reverse the 2 and append them both
+                            shiftLayers.reverse()
+                            layers.push(...shiftLayers.splice(0, 2)) // clear/reset this array, so we don't add these again
+                        }
+                    })
+                    currentModel.layers = layers
+                    return {
+                        ...oldState,
+                        currentModel,
                     }
-                    if (idx === index || idx === targetIndex) {
-                        // this is one of the elements we want to swap
-                        shiftLayers.push(layer)
-                    } 
-                    if (shiftLayers.length === 2) {
-                        // reverse the 2 and append them both
-                        shiftLayers.reverse()
-                        layers.push(...shiftLayers.splice(0, 2))  // clear/reset this array, so we don't add these again                         
-                    }                    
-                })
-                currentModel.layers = layers
-                return {
-                    ...oldState,
-                    currentModel,
+                },
+                () => {
+                    // update the layer editors if they are open and re-draw the layer
+                    updates.forEach(i => {
+                        const ref = this.layers[i]
+                        if (ref != null) {
+                            ref.updateComponentList(this.state.currentModel.layers[i].components.map(comp => comp.id))
+                            ref.redraw()
+                        }
+                    })
+                    this.alert.success("Layer moved")
                 }
-            }, () => {
-                // update the layer editors if they are open and re-draw the layer
-                updates.forEach(i => {
-                    const ref = this.layers[i]
-                    if (ref != null) {
-                        ref.updateComponentList(this.state.currentModel.layers[i].components.map(comp => comp.id))
-                        ref.redraw()
-                    }
-                })   
-                this.alert.success("Layer moved")
-            })
+            )
         }
     }
 
@@ -288,6 +306,20 @@ class ModelEditor extends React.Component {
             this.setState(oldState => {
                 const { currentModel } = oldState
                 currentModel.layers[layerIndex].height = height
+                return {
+                    ...oldState,
+                    currentModel,
+                }
+            })
+        }
+    }
+
+    updateLayerLabel(layerIndex) {
+        return ev => {
+            const newLabel = ev.target.value
+            this.setState(oldState => {
+                const { currentModel } = oldState
+                currentModel.layers[layerIndex].label = newLabel
                 return {
                     ...oldState,
                     currentModel,
@@ -356,26 +388,51 @@ class ModelEditor extends React.Component {
         reader.readAsText(file)
         reader.onload = () => {
             const model = JSON.parse(reader.result)
-            this.setState({
-                currentModel: model,
-                guideLines: generateGuidelines(model),
-            })
+            this.setState(
+                {
+                    currentModel: model,
+                    guideLines: generateGuidelines(model),
+                },
+                () => {
+                    model.layers.forEach((layer, index) => {
+                        const ref = this.layers[index]
+                        if (ref != null) {
+                            ref.updateComponentList(layer.components.map(comp => comp.id))
+                            ref.redraw()
+                        }
+                    })
+                }
+            )
         }
     }
 
     render() {
         return (
             <div>
+                <NotificationBar
+                    ref={el => {
+                        this.alert = el
+                    }}
+                />
                 {this.state.currentModel.layers.map((layer, index) => (
                     <div key={index}>
                         <div style={style.layerTitle}>
                             <div onClick={this.toggleLayer(index)} style={style.layerLabel}>
                                 Layer {index + 1}
+                                {layer.label !== "" && layer.label != null ? ` (${layer.label})` : null}
                             </div>
                             <div style={style.sortLayer}>
-                                {index !== 0 ? <span style={mixins.clickable} onClick={this.moveLayer(index, true)}>&uarr;</span> : null}
+                                {index !== 0 ? (
+                                    <span style={mixins.clickable} onClick={this.moveLayer(index, true)}>
+                                        &uarr;
+                                    </span>
+                                ) : null}
                                 <span>&nbsp;</span>
-                                {index !== this.state.currentModel.layers.length - 1 ? <span style={mixins.clickable} onClick={this.moveLayer(index, false)}>&darr;</span> : null}
+                                {index !== this.state.currentModel.layers.length - 1 ? (
+                                    <span style={mixins.clickable} onClick={this.moveLayer(index, false)}>
+                                        &darr;
+                                    </span>
+                                ) : null}
                             </div>
                             <div style={style.copyLayer} onClick={this.askCopyLayer(index)}>
                                 Copy
@@ -396,10 +453,12 @@ class ModelEditor extends React.Component {
                                     guideLines={this.state.guideLines}
                                     lastWidth={this.state.lastWidth}
                                     lastHeight={this.state.lastHeight}
-                                    ref={el => { this.layers[index] = el }}
+                                    ref={el => {
+                                        this.layers[index] = el
+                                    }}
                                 />
                                 <div style={mixins.vSpacer(10)} />
-                                <div style={style.heightForm}>
+                                <div style={style.layerForm}>
                                     <div>
                                         <label style={mixins.label}>Layer Render Height</label>
                                     </div>
@@ -409,6 +468,17 @@ class ModelEditor extends React.Component {
                                             style={mixins.textInput}
                                             onChange={this.updateLayerHeight(index)}
                                             value={layer.height}
+                                        />
+                                    </div>
+                                    <div style={mixins.right}>
+                                        <label style={mixins.label}>Layer Label</label>
+                                    </div>
+                                    <div>
+                                        <input
+                                            type="text"
+                                            style={mixins.textInput}
+                                            onChange={this.updateLayerLabel(index)}
+                                            defaultValue={layer.label}
                                         />
                                     </div>
                                 </div>
@@ -433,7 +503,10 @@ class ModelEditor extends React.Component {
 
                 {this.state.copyLayerIndex != null ? (
                     <Popup title="Copy Layer" cancel={this.askCopyLayer(null)} ok={this.copyLayer}>
-                        <p>Please specify any labels or prefixes that you wish to replace.</p>
+                        <p>
+                            Importing a model will remove any previously existing layers. Please specify any labels or
+                            prefixes that you wish to replace.
+                        </p>
                         <CopyLayerForm
                             ref={el => {
                                 this.copyLayerForm = el
@@ -458,7 +531,12 @@ class ModelEditor extends React.Component {
                     </div>
                 </div>
                 <ToggleSection label="Preview">
-                    <Timeseries3D model={this.state.currentModel} />
+                    <Timeseries3D
+                        model={this.state.currentModel}
+                        ref={el => {
+                            this.preview = el
+                        }}
+                    />
                 </ToggleSection>
             </div>
         )
