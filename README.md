@@ -125,7 +125,7 @@ Provide the data as `data` property to the `Timeseries3D`. The data structure is
 **Optional Parameters (Data)**
 
 - `data` - a JSON object containing the values to render. This can either be a flat list
- of values or list of values.
+ of values or list of values - default `null`.
 - `minValue` - provide a minimum value that defines the bottom end of the colour scale. 
  Values below will be rendered with the colour representing the minimum value - default 
  _will be determined automatically from the data_
@@ -135,13 +135,13 @@ Provide the data as `data` property to the `Timeseries3D`. The data structure is
 - `colors` - an array of 3 colours, each colour provided as an array of 3 integers 
  representing the RGB values - default `[[248, 105, 107], [255, 255, 255], [90, 138, 198]]` 
   (red -> white -> blue)
-- `inverse` - inverses the colour representation of the min/max value
+- `inverse` - inverses the colour representation of the min/max value - default `false`
 - `timestampFormat` - whether the timestamps are provided as seconds, milliseconds or 
  nanoseconds (`"s"`, `"ms"`, `"ns"`) - default `"s"`
 - `autoplay` - if time-series data is provided, this will indicate whether to  
  automatically start playing - default `false`
 - `dateFormat` - if time-series data is provided, this will provide the momentjs format
- to render the timestamp in the player bar.
+ to render the timestamp in the player bar - default `"LLL"`
 - `playbackSpeed` - the delay in milliseconds between frames during playback - default `500`
 
 ### ModelEditor
