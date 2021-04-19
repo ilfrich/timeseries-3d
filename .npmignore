@@ -6,3 +6,4 @@
 *.iml
 npm-debug.log
 src/
+static/

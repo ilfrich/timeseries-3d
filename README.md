@@ -26,6 +26,11 @@ npm install --save timeseries-3d
 * Data for the `Timeseries3D` can be provided in 2 ways: as JSON object providing single values for each component OR as JSON object 
  with list of values and corresponding timestamps for each component.
 
+**Preview**
+
+![Model Editor](/static/model-editor.png)
+![3D Visualisation](/static/3d-visualisation.png)
+
 ### Step 1 - Create a Model (`ModelEditor`)
 
 1. Use the "+" bar at the bottom to add new layers. Click on a layer to expand it.

@@ -12,10 +12,9 @@
     "url": "git+https://github.com/ilfrich/timeseries-3d.git"
   },
   "keywords": [
-    "styles",
-    "utilities",
-    "react",
-    "component"
+    "modelling",
+    "3d",
+    "timeseries"
   ],
   "author": "Peter Ilfrich",
   "license": "MIT",
