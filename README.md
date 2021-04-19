@@ -23,12 +23,15 @@ npm install --save timeseries-3d
 * This package provides 2 components: a `ModelEditor` and a `Timeseries3D` component, which visualises the model and any data provided.
 * The `ModelEditor` allows to create different layers of a 3D model using a floorplan-like editor for each layer.
     * The model editor allows to import and export the model as JSON file
-* Data for the `Timeseries3D` can be provided in 2 ways: as JSON object providing single values for each component OR as JSON object 
- with list of values and corresponding timestamps for each component.
+* Data for the `Timeseries3D` can be provided in 2 ways: as JSON object providing single values for each component OR as JSON object with list of values and corresponding timestamps for each component.
+    * If no data is provided, the component will simply render the model
 
-**Preview**
+**Preview ModelEditor**
 
 ![Model Editor](/static/model-editor.png)
+
+**Preview Timeseries3D**
+
 ![3D Visualisation](/static/3d-visualisation.png)
 
 ### Step 1 - Create a Model (`ModelEditor`)
