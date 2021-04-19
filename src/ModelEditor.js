@@ -445,6 +445,7 @@ class ModelEditor extends React.Component {
                             <div>
                                 <LayerEditor
                                     layer={layer}
+                                    layerIndex={index}
                                     model={this.state.currentModel}
                                     height={this.props.height || DEFAULT_LAYER_EDITOR_HEIGHT}
                                     width={this.state.editorWidth}

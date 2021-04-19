@@ -1,4 +1,4 @@
-import { NotificationBar } from "quick-n-dirty-react"
+import { NotificationBar, mixins } from "quick-n-dirty-react"
 import React from "react"
 import ComponentList from "./ComponentList"
 
@@ -20,6 +20,7 @@ class LayerEditor extends React.Component {
             start: null,
             components: props.layer.components.map(comp => comp.id),
             currentComponent: null,
+            showGuidelines: true,
         }
 
         // drawing related
@@ -33,10 +34,13 @@ class LayerEditor extends React.Component {
         this.selectComponent = this.selectComponent.bind(this)
         this.updateComponentList = this.updateComponentList.bind(this)
         this.removeComponent = this.removeComponent.bind(this)
+
+        // behaviour related
+        this.changeGuidelines = this.changeGuidelines.bind(this)
     }
 
     componentDidMount() {
-        this.redraw() // redraw initial guidelines or any components passed in
+        this.redraw() // trigger redraw as soon as editor gets displayed (fresh layer will render guidelines only)
     }
 
     onMouseDown(ev) {
@@ -144,21 +148,30 @@ class LayerEditor extends React.Component {
             }
         }
 
-        // handle snapping to vertical and horizontal guidelines
-        this.props.guideLines.vertical.forEach(gl => {
-            if (Math.abs(x - gl) < SNAP_PROXIMITY) {
-                // close enough to vertical guideline
-                x = gl
-            }
-        })
-        this.props.guideLines.horizontal.forEach(gl => {
-            if (Math.abs(y - gl) < SNAP_PROXIMITY) {
-                // close enough to horizontal guideline
-                y = gl
-            }
-        })
+        if (this.state.showGuidelines === true) {
+            // handle snapping to vertical and horizontal guidelines
+            this.props.guideLines.vertical.forEach(gl => {
+                if (Math.abs(x - gl) < SNAP_PROXIMITY) {
+                    // close enough to vertical guideline
+                    x = gl
+                }
+            })
+            this.props.guideLines.horizontal.forEach(gl => {
+                if (Math.abs(y - gl) < SNAP_PROXIMITY) {
+                    // close enough to horizontal guideline
+                    y = gl
+                }
+            })
+        }
 
         return { x, y }
+    }
+
+    changeGuidelines(ev) {
+        const val = ev.target.checked
+        this.setState({ showGuidelines: val }, () => {
+            this.redraw()
+        })
     }
 
     redraw() {
@@ -171,20 +184,22 @@ class LayerEditor extends React.Component {
         ctx.textAlign = "left"
 
         // re-draw all guidelines
-        ctx.save()
-        ctx.setLineDash([2, 8]) // line, space
-        ctx.beginPath()
-        ctx.strokeStyle = "#cc0" // yellow for guidelines
-        this.props.guideLines.vertical.forEach(x => {
-            ctx.moveTo(x, 0)
-            ctx.lineTo(x, this.props.height)
-        })
-        this.props.guideLines.horizontal.forEach(y => {
-            ctx.moveTo(0, y)
-            ctx.lineTo(this.props.width, y)
-        })
-        ctx.stroke()
-        ctx.restore()
+        if (this.state.showGuidelines) {
+            ctx.save()
+            ctx.setLineDash([4, 8]) // line, space
+            ctx.beginPath()
+            ctx.strokeStyle = "#cc0" // yellow for guidelines
+            this.props.guideLines.vertical.forEach(x => {
+                ctx.moveTo(x, 0)
+                ctx.lineTo(x, this.props.height)
+            })
+            this.props.guideLines.horizontal.forEach(y => {
+                ctx.moveTo(0, y)
+                ctx.lineTo(this.props.width, y)
+            })
+            ctx.stroke()
+            ctx.restore()
+        }        
 
         // re-draw all components
         this.props.layer.components.forEach(comp => {
@@ -269,6 +284,10 @@ class LayerEditor extends React.Component {
                     width={this.props.width}
                     height={this.props.height}
                 />
+                <div>
+                    <input type="checkbox" style={mixins.checkbox} checked={this.state.showGuidelines} onChange={this.changeGuidelines} id={`show-guidelines-${this.props.layerIndex}`} />
+                    <label style={mixins.label} htmlFor={`show-guidelines-${this.props.layerIndex}`}>Show Guidelines</label>
+                </div>
             </div>
         )
     }

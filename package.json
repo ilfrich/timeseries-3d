@@ -26,7 +26,7 @@
   "dependencies": {
     "moment": "^2.29.0",
     "quick-n-dirty-react": "0.0.11",
-    "quick-n-dirty-utils": "^0.0.6",
+    "quick-n-dirty-utils": "^0.0.7",
     "react": "^16.13.1",
     "three": "^0.127.0"
   },
